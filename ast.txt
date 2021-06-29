@@ -1,0 +1,1 @@
+(((int)returnType,(main)funcName,()myFuncInputPara,(((int)type,(x)var)myDeclare((=)op,(x)var,(0)intConst)myEpxer((=)op,(x)ID,((+)op,(x)ID,(1)intConst)myExpr)myExpr((0)intConst)myReturn)myFuncBody)myFuncDefinition)myGlobal

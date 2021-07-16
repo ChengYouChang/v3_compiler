@@ -1,6 +1,10 @@
 int main()
 {
-    int x=0;
-    x++;
+    for(int i=0;i<3;i++)
+    
+    
+    {
+        x=1;
+    }
     return 0;
 }

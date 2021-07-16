@@ -125,3 +125,12 @@ class v3_compilerListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by v3_compilerParser#myNL.
+    def enterMyNL(self, ctx:v3_compilerParser.MyNLContext):
+        pass
+
+    # Exit a parse tree produced by v3_compilerParser#myNL.
+    def exitMyNL(self, ctx:v3_compilerParser.MyNLContext):
+        pass
+
+

@@ -1,5 +1,8 @@
 grammar v3_compiler;
 
+@parser::members{
+nl_count=0;
+}
 // Parser Rules
 globalSpace returns[finalAST = '']
     :   {$finalAST += '('}
@@ -12,6 +15,8 @@ myGlobalCode returns[myGlobalAST = '']
         {$myGlobalAST += '(%s)myDeclare'%($d.myDeclareAST)}
     | myFuncDefinition
         {$myGlobalAST += '(%s)myFuncDefinition'%($myFuncDefinition.myFuncDefinitionAST)}
+    | myNL
+        {$myGlobalAST += '%s'%($myNL.myNLAST)}
     ;
 
 myDeclare returns[myDeclareAST='']
@@ -52,8 +57,11 @@ myDeclare returns[myDeclareAST='']
     // function pointer declaration
     | myType LeftParen? Star? ID RightParen? LeftParen (myFuncInputPara(Comma myFuncInputPara)*)? RightParen
     
-    // struct declaration
-    | STRUCT ID myStatement
+    // struct definition
+    | STRUCT ID 
+        {$myDeclareAST += '((%s)myStructName' %($ID.text)}
+    myStatement
+        {$myDeclareAST += '(%s)myStructBody)myStructDefinition' %($myStatement.myStatementAST)}
     ;
 myFuncDefinition returns[myFuncDefinitionAST='']
     : myType ID LeftParen 
@@ -80,8 +88,15 @@ myFuncInputPara returns[myFuncInputParaAST='']
     ;
 myStatement returns[myStatementAST='']
     : // statement: '{' user_codes '}'
-    LeftBrace (myFuncBodyCode
-        {$myStatementAST += '%s'%($myFuncBodyCode.myFuncBodyCodeAST)})* RightBrace
+    (myNL
+        {$myStatementAST += '%s'%($myNL.myNLAST)}
+    )* LeftBrace (myNL
+        {$myStatementAST += '%s'%($myNL.myNLAST)}
+    )* (myFuncBodyCode
+        {$myStatementAST += '%s'%($myFuncBodyCode.myFuncBodyCodeAST)})* 
+        RightBrace(myNL
+        {$myStatementAST += '%s'%($myNL.myNLAST)}
+    )*
     | myFuncBodyCode
         {$myStatementAST += '%s'%($myFuncBodyCode.myFuncBodyCodeAST)}
     ;
@@ -95,6 +110,9 @@ myFuncBodyCode returns[myFuncBodyCodeAST='']
     | mySelection
         {$myFuncBodyCodeAST += '%s'%($mySelection.mySelectionAST)}
     | myIteration
+        {$myFuncBodyCodeAST += '%s'%($myIteration.myIterationAST)}
+    | myNL
+        {$myFuncBodyCodeAST += '%s'%($myNL.myNLAST)}
     ;
 myExpr returns[myExprAST='']
     :// priority level 1
@@ -102,18 +120,34 @@ myExpr returns[myExprAST='']
         {$myExprAST += '((=)op,%s,((+)op,%s,(1)intConst)myExpr)myExpr'%($e1.myExprAST, $e1.myExprAST)}
     | e1=myExpr MinusMinus                 // a--
         {$myExprAST += '((=)op,%s,((-)op,%s,(1)intConst)myExpr)myExpr'%($e1.myExprAST, $e1.myExprAST)}
-    | ID LeftParen (myExpr (Comma myExpr)*)*RightParen  // func(1, 2, 3...)
+    | ID LeftParen                         // func(1, 2, 3...)
+            {$myExprAST += '((%s)myFuncName('%($ID.text)}
+        (myExpr 
+            {$myExprAST += '%s'%($myExpr.myExprAST)}
+        (Comma myExpr
+            {$myExprAST += '%s'%($myExpr.myExprAST)})*
+        )*
+            {$myExprAST += ')inputPara)myFuncCall'}
+        RightParen
     | ID LeftBracket myExpr RightBracket// a[3], a[x+4]
-    | myExpr Dot ID                     // a.b
-    | ID Arrow ID                       // a->b
+        {$myExprAST += '((%s)arrayName,(%s)arrayIndex)myArrayVar'%($ID.text, $myExpr.myExprAST)}
+    | e1=myExpr Dot ID                  // a.b
+        {$myExprAST += '(%s(%s)myStructMember)myStructVar' %($e1.myExprAST, $ID.text)}
+    | e1=myExpr Arrow ID                // a->b
+        {$myExprAST += '(%s(%s)myStructMember)myPtrVar' %($e1.myExprAST, $ID.text)}
     // priority level 2
     | Plus myExpr                       // +3
+        {$myExprAST += '%s'%($myExpr.myExprAST)}
     | Minus myExpr                      // -3
+        {$myExprAST += '((*)op,%s,-1)myExpr'%($myExpr.myExprAST)}
     | Not myExpr                        // !a
     | Tilde myExpr                      // ~a
-    | LeftParen myType (Star)* RightParen myExpr// (int)3.14
+    | LeftParen myType (Star)* RightParen myExpr// (int)x
+        {$myExprAST += '((%s)castingType,%s)myCasting'%($myType.myTypeAST, $myExpr.myExprAST)}
     | Star myExpr                       // *a
+        {$myExprAST += '(%s)addrContent'%($myExpr.myExprAST)}
     | And myExpr                        // &a
+        {$myExprAST += '(%s)varAddr'%($myExpr.myExprAST)}
     // priority level 3
     | e1=myExpr op=(Star|Div|Mod) e2=myExpr      // a*b, a/b, a%b
         {$myExprAST += '((%s)op,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
@@ -168,12 +202,29 @@ mySelection returns[mySelectionAST='']
         {$mySelectionAST += '(%s)elseBody'%($myStatement.myStatementAST)})?
         {$mySelectionAST +=')mySelection'}
     ;
-myIteration
-    : FOR LeftParen myForCondi RightParen myStatement
+myIteration returns[myIterationAST='']
+    : FOR LeftParen 
+        {$myIterationAST += '('}
+    myForCondi RightParen 
+        {$myIterationAST += '%s'%($myForCondi.myForCondiAST)}
+    myStatement
+        {$myIterationAST += '(%s)myForBody)myFor'%($myStatement.myStatementAST)}
     | WHILE LeftParen myExpr? RightParen myStatement
     ;
-myForCondi
-    : (myDeclare| myExpr?) Semi myExpr? Semi myExpr?
+myForCondi returns[myForCondiAST='']
+    : 
+        {$myForCondiAST += '('}
+    (myDeclare
+        {$myForCondiAST += '%s'%($myDeclare.myDeclareAST)}
+    | myExpr
+        {$myForCondiAST += '%s'%($myExpr.myExprAST)})?
+        {$myForCondiAST += ')forInit('}
+    Semi (myExpr
+        {$myForCondiAST += '%s'%($myExpr.myExprAST)})? 
+        {$myForCondiAST += ')forCondi('}
+    Semi (myExpr
+        {$myForCondiAST += '%s'%($myExpr.myExprAST)})?
+        {$myForCondiAST += ')forIncrement'}
     ;
 
 myReturn returns[myReturnAST='']
@@ -190,6 +241,13 @@ myType returns[myTypeAST='']
     | VOID
         {$myTypeAST += 'void'}
     | STRUCT ID
+        {$myTypeAST += '(%s)myStruct'%($ID.text)}
+    ;
+
+myNL returns[myNLAST='']    // for debugging (count line number)
+    : '\n'
+        {self.nl_count = self.nl_count+1}
+        {$myNLAST='(%i)myNL'%(self.nl_count)}
     ;
 
 // ==============================================================
@@ -270,13 +328,12 @@ ID
     ;
 
 // Skip rules
-Newline
-    : ( '\r' '\n'? | '\n' ) -> skip
-    ;
-WhiteSpace
-    : (' ' | '\t' ) -> skip
-    ;
+
+
 LineComment
     :   '//' ~[\r\n]*
         -> skip
+    ;
+WhiteSpace
+    : (' ' | '\t' | '\r') -> skip
     ;

@@ -1,10 +1,12 @@
+// test different type of variable
+struct student{
+    int h;
+};
 int main()
 {
-    for(int i=0;i<3;i++)
-    
-    
-    {
-        x=1;
-    }
+    int x;
+    int *y;
+    int z[2];
+    struct student s;
     return 0;
 }

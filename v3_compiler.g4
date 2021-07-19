@@ -41,18 +41,9 @@ myDeclare returns[myDeclareAST='']
     
     // array declaration: int a[10]; int b[2][3];
     | myType ID LeftBracket IntegerConstant RightBracket
-        {$myDeclareAST += '((%s)type,((%s)arrayName,(%s'%($myType.myTypeAST, $ID.text, $IntegerConstant.text)}
-    (LeftBracket IntegerConstant RightBracket
-        {$myDeclareAST += ',%s'%($IntegerConstant.text)})* 
-        {$myDeclareAST += ')arraySize)arrayVar'}
-    (Assign LeftBrace 
-        {$myDeclareAST += '('}
-    int1=IntegerConstant
-        {$myDeclareAST += '%s'%($int1.text)}
-    (Comma int2=IntegerConstant
-        {$myDeclareAST += ',%s'%($int2.text)})* 
-    RightBrace
-        {$myDeclareAST += ')initValue'})?
+        {$myDeclareAST += '((%s[%s])type,(%s)var'%($myType.myTypeAST, $IntegerConstant.text, $ID.text)}
+    (LeftBracket IntegerConstant RightBracket)* 
+    (Assign LeftBrace int1=IntegerConstant(Comma int2=IntegerConstant)* RightBrace)?
         {$myDeclareAST += ')myDeclare'}
     // function pointer declaration
     | myType LeftParen? Star? ID RightParen? LeftParen (myFuncInputPara(Comma myFuncInputPara)*)? RightParen

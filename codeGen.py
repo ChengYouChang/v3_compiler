@@ -92,15 +92,15 @@ def checkAndAddLabelTable(t, codeLN):
         return None
     '''
     if(t.name == 'int' or t.name == 'intConst'):
-        intContent = t.children[0].name
+        intContent = t.children[0]
         if(intContent in labelTable):
-            # if this int already exist in label table
-            # set code end
+            # if this intConst already exist in labelTable, set code end LN
             labelTable[intContent]['lineNoEnd'] = codeLN
         else:
-            # add this int into label table
+            # if not, add this intConst in labelTable
             addNewLabel2labelTable(intContent, 'const', 'int', 4, codeLN, None, False)
-    elif(t.name == 'var'):
+    elif(t.name == 'ID'):
+        # handle variable
         varName = t.children[0].name
         if(varName in labelTable):
             # if this variable already in label table
@@ -108,55 +108,45 @@ def checkAndAddLabelTable(t, codeLN):
         elif(varName in globalVarTable):
             pass
         else:
-            # error
             handle_error(codeLN, sys._getframe().f_lineno, 'variable \'%s\' not declare yet'%(varName))
-    elif(t.name == 'myStructVar'):
-        if(t.children[0].name == 'var'):
-            varName = t.children[0].children[0].name
-        elif(t.children[0].name == 'myStructVar'):
-            varName = checkAndAddLabelTable(t.children[0],codeLN)
-        if(varName in labelTable):
-            # if this variable already in label table
-            labelTable[varName]['lineNoEnd'] = codeLN
-            return varName
-        else:
-            # error
-            handle_error(codeLN, sys._getframe().f_lineno, 'variable \'%s\' not declare yet'%(varName))
-    elif(t.name == 'arrayVar'):
-        # handle array
-        arrayName = t.search_nodes(name = 'arrayName')[0].children[0].name
-        arrayIndex = t.search_nodes(name = 'arrayIndex')[0].children[0]
+    elif(t.name == 'myArrayVar'):
+        # handle arrayVar
+        arrayName = t.children[0].children[0].name
+        arrayIndex = t.children[1].children[0]
         if(arrayName in labelTable):
+            # if this variable already in label table
             labelTable[arrayName]['lineNoEnd'] = codeLN
-        elif(arrayName in globalVarTable):
+        elif(varName in globalVarTable):
             pass
         else:
-            handle_error(codeLN, sys._getframe().f_lineno, 'variable \'%s\' not declare yet'%(arrayName))
-        checkAndAddLabelTable(arrayIndex, codeLN)
-    elif(t.name == 'addrContent'):
-        # get the address content (&a)
-        labelTable_Expr(t.children[0], codeLN)
-    elif(t.name == 'varAddr'):
-        # get the address of variable
-        varName = t.search_nodes(name='var')[0].children[0].name
-        if(varName in labelTable):
-            # if this variable already in label table
-            labelTable[varName]['lineNoEnd'] = codeLN
-        else:
-            # error
             handle_error(codeLN, sys._getframe().f_lineno, 'variable \'%s\' not declare yet'%(varName))
+        checkAndAddLabelTable(arrayIndex, codeLN)
+        
     elif(t.name == 'myExpr'):
         # handle expr
         labelTable_Expr(t, codeLN)
-    elif(t.name == 'mySubVar'):
+    elif(t.name == 'addrContent'):
+        # get the address content (&a)
+        labelTable_Expr(t, codeLN)
+    elif(t.name == 'varAddr'):
+        # get the address of variable
+        varName = t.children[0].children[0].name
+        if(varName in labelTable):
+            # if this variable already in label table
+            labelTable[varName]['lineNoEnd'] = codeLN
+        else:
+            # error
+            handle_error(codeLN, sys._getframe().f_lineno, 'variable \'%s\' not declare yet'%(varName))
+    elif(t.name == 'myFuncCall'):
         # handle sub program
+        inputPara = t.children[1]
+        for ip in inputPara.children:
+            checkAndAddLabelTable(ip, codeLN)
         pass
     elif(t.name == 'None'):
         pass
     elif(t.name == 'myCasting'):
-        checkAndAddLabelTable(t.children[0].children[1], codeLN)
-    elif(t.name == 'castingType'):
-        pass
+        checkAndAddLabelTable(t.children[1], codeLN)
     else:
         handle_error(codeLN, sys._getframe().f_lineno, 'Unknow label name: %s'%(t.name))
         
@@ -235,7 +225,6 @@ def handle_DeclareTypes(t, codeLN):
         codeLN: user code line number
     '''
     
-    
     INT_LEN = 4  # int content length
     
     declareType = t.search_nodes(name="type")[0].children[0].name
@@ -270,31 +259,6 @@ def labelTable_Declare(t, codeLN):
         t: declare user code (Tree format)
         codeLN: user code line number
     '''
-    '''
-    global varCount
-    
-    INT_LEN = 4  # int content length
-    
-    declareType = t.search_nodes(name="type")[0].children[0].name
-    varName = t.search_nodes(name = 'var')[0].children[0]
-    
-    if('*' in declareType):
-        # handle normal ptr var    
-        contentLen = INT_LEN
-    elif('[' in declareType):
-        # handle array var
-        arraySize = int(declareType[declareType.find('[')+1:declareType.find(']')])
-        contentLen = INT_LEN*arraySize
-        spPosition = varCount*4
-    elif(declareType == 'myStruct'):
-        # handle struct var
-        structName = t.search_nodes(name="myStruct")[0].children[0].name
-        declareType = 'struct ' + structName
-        contentLen = len(structTable[structName])*4
-    else:
-        # handle normal var
-        contentLen = INT_LEN
-    '''
     global varCount
     varName, declareType, contentLen, declareVarCount = handle_DeclareTypes(t, codeLN)
     
@@ -308,66 +272,17 @@ def labelTable_Declare(t, codeLN):
         
         # chenge varCount
         varCount += declareVarCount
-        '''
-        if('[' in declareType):
-            varCount += arraySize
-        elif('struct' in declareType):
-            varCount += structTable[structName]['varCount']
-        else:
-            varCount += 1
-        '''
-    
-    '''
-    if(varType.name == 'var'):
-        # handle normal var
-        if declareType == 'int' :
-            # setting variable length
-            contentLen = 4
-        elif('*' in declareType):
-            contentLen = 4
-        elif(declareType == 'myStruct'):
-            structName = t.search_nodes(name="myStruct")[0].children[0].children[0].name
-            declareType = 'struct ' + structName
-            contentLen = len(structTable[structName])*4
-        else:
-            handle_error(codeLN, sys._getframe().f_lineno, 'Unknow declare type: %s'%(declareType))
-        varName = varType.children[0].name
-        if(varName in labelTable):
-            handle_error(codeLN, sys._getframe().f_lineno, 'Variable already declare: %s'%(varName))
-        else:
-            spPosition = varCount*4
-            addNewLabel2labelTable(varName, 'var', declareType, contentLen, codeLN, spPosition, False)
-            if('struct' not in declareType):
-                varCount += 1
-            else:
-                varCount += structTable[structName]['varCount']
-    elif(varType.name == 'arrayVar'):
-        # hadle array var
-        arrayName = t.search_nodes(name='arrayName')[0].children[0].name
-        arraySize = t.search_nodes(name='arrayIndex')[0].children[0].children[0].name
-        if declareType == 'int' :
-            contentLen = 4*int(arraySize)
-        spPosition = varCount*4
-        addNewLabel2labelTable(arrayName, 'arrayVar','int', contentLen, codeLN, spPosition, False)
-        varCount += int(arraySize)
-    else:
-        handle_error(codeLN, sys._getframe().f_lineno, 'Unknow var')
-    '''
-
-def labelTable_Assign(t, codeLN):
-    '''
-        None labelTable_Assign(t: ete3Tree, codeLN: int)
-        handle declare and put variable or const into label table
         
-        t: user code (Tree format)
-        codeLN: user code line number
-    '''
+'''
+def labelTable_Assign(t, codeLN):
+    
     # handle variable, set code end
     # if variable already in label table
     assignLeft = t.search_nodes(name = "assignLeft")[0].children[0]
     assignRight = t.search_nodes(name = "assignRight")[0].children[0]
     checkAndAddLabelTable(assignLeft, codeLN)
     checkAndAddLabelTable(assignRight, codeLN)
+'''
 
 def labelTable_Return(t, codeLN):
     '''
@@ -388,27 +303,18 @@ def labelTable_Expr(t, codeLN):
         t: user code (Tree format)
         codeLN: user code line number
     '''
-    
-    if(len(t.children) == 1):
-        checkAndAddLabelTable(t, codeLN)
-        return
-    elif(len(t.children) == 2):
-        checkAndAddLabelTable(t.children[0], codeLN)
-        checkAndAddLabelTable(t.children[1], codeLN)
-        return
-    else:
-        checkAndAddLabelTable(t.children[0], codeLN)
-        checkAndAddLabelTable(t.children[2], codeLN)
-    
-def labelTable_subVar(t):
-    pass
+    for e in t.children:
+        if(e.name == 'op'):
+            continue
+        else:
+            checkAndAddLabelTable(e, codeLN)
 
-def labelTable_ifelse(t):
+def labelTable_selection(t):
     # handle if else
     ifCondi = t.search_nodes(name='ifCondi')[0].children[0]
     ifCodeBlock = t.search_nodes(name='ifBody')[0]
     
-    labelTable_Expr(ifCondi, findLN(t, 0))
+    labelTable_Expr(ifCondi, findLN(ifCodeBlock, 0))
     labelTable_codeBodyFilter(ifCodeBlock)
     
     if(t.search_nodes(name='elseBody') == []):
@@ -417,8 +323,8 @@ def labelTable_ifelse(t):
         # if else code block exist
         elseCodeBlock = t.search_nodes(name='elseBody')[0]
         labelTable_codeBodyFilter(elseCodeBlock)
-
-def labelTable_forloop(t):
+        
+def labelTable_iteration(t):
     forInit = t.search_nodes(name = 'forInit')[0].children[0]
     forCondi = t.search_nodes(name = 'forCondi')[0].children[0]
     forIncrement = t.search_nodes(name = 'forIncrement')[0].children[0]
@@ -427,8 +333,6 @@ def labelTable_forloop(t):
     # handle forInit
     if(forInit.name == 'myDeclare'):
         labelTable_Declare(forInit, findLN(t,0))
-    elif(forInit.name == 'myAssign'):
-        labelTable_Assign(forInit, findLN(t,0))
     elif(forInit.name == 'myExpr'):
         labelTable_Expr(forInit, findLN(t,0))
     elif(forInit.name == 'None'):
@@ -443,14 +347,10 @@ def labelTable_forloop(t):
         labelTable_Expr(forCondi, findLN(t, 0))
     
     # handle for Increment
-    if(forIncrement.name == 'myAssign'):
-        labelTable_Assign(forIncrement, findLN(t,0))
-    elif(forIncrement.name == 'myExpr'):
-        labelTable_Expr(forIncrement, findLN(t,0))
-    elif(forIncrement.name == 'None'):
+    if(forIncrement.name == 'None'):
         pass
     else:
-        handle_error(findLN(t, 0), sys._getframe().f_lineno, 'Unknow user code type: %s'%(forIncrement.name))
+        labelTable_Expr(forIncrement, findLN(t,0))
         
     # handle for body
     labelTable_codeBodyFilter(forBody)
@@ -462,16 +362,16 @@ def labelTable_codeBodyFilter(t):
             continue
         elif(t.children[i].name == 'myDeclare'):
             labelTable_Declare(t.children[i], findLN(t, i))
-        elif(t.children[i].name == 'myAssign'):
-            labelTable_Assign(t.children[i], findLN(t, i))
+        elif(t.children[i].name == 'myExpr'):
+            labelTable_Expr(t.children[i], findLN(t, i))
         elif(t.children[i].name == 'myReturn'):
             labelTable_Return(t.children[i], findLN(t, i))
-        elif(t.children[i].name == 'myIF'):
-            labelTable_ifelse(t.children[i])
-        elif(t.children[i].name == 'myFOR'):
-            labelTable_forloop(t.children[i])
-        elif(t.children[i].name == 'mySubVar'):
-            labelTable_subVar(t.children[i])
+        elif(t.children[i].name == 'mySelection'):
+            labelTable_selection(t.children[i])
+        elif(t.children[i].name == 'myIteration'):
+            labelTable_iteration(t.children[i])
+        elif(t.children[i].name == 'myFuncCall'):
+            checkAndAddLabelTable(t.children[i], findLN(t, i))
         else:
             # error handle
             handle_error(findLN(t, i), sys._getframe().f_lineno, 'Unknow user code type: %s'%(t.children[i].name))
@@ -510,7 +410,7 @@ def handleGlobal(t):
         elif(t.children[i].name == 'myDeclare'):
             global_Declare(t.children[i], findLN(t, i))
         elif(t.children[i].name == 'myFuncDefinition'):
-            handleSub(t.children[i])
+            handleFuncDefinition(t.children[i])
         else:
             # error handle
             handle_error(findLN(t, i), sys._getframe().f_lineno, 'Unknow user code type: %s'%(t.children[i].name))
@@ -522,7 +422,7 @@ def spTableBuilding_structHandle(spTable, labelName, structName, structContent, 
             memberCount = 0
             j=0
             for sb in structBody:
-                if(sb[0].split()[0] == 'myStruct'):
+                if(sb[0].split()[0] == 'myStruct'): # handle nested struct
                     nestedStructName = sb[0].split()[1]
                     nestedStructVarName = sb[1]
                     nestedStructContent = structTable[nestedStructName]
@@ -539,28 +439,38 @@ def spTableBuilding_structHandle(spTable, labelName, structName, structContent, 
 def spTableBuilding():
     spTable = newSpTable(varCount)
     for labelName, labelContent in labelTable.items():
-        if(labelContent['labelType'] == 'var' or  labelContent['labelType'] == 'ptrVar'):
+        #if(labelContent['labelType'] == 'var' or  labelContent['labelType'] == 'ptrVar'):
+        if(labelContent['labelType']=='const'):
+            # this label is a const
+            continue
+        elif(labelContent['contentType'] == 'int' or '*' in labelContent['contentType']): # normal var and ptr var
             spPosition = labelContent['spPosition']
-            if('struct' in labelContent['contentType']):
-                structName = labelContent['contentType'].split()[1]
-                structContent = structTable[structName]
-                spTable = spTableBuilding_structHandle(spTable, labelName, structName, structContent, spPosition)[0]
-            else:
-                for s in spTable:
-                    if(s['index'] == spPosition):
-                        s['varName'] = labelName
-                        break
-        elif(labelContent['labelType'] == 'arrayVar'):
+            
+            for s in spTable:
+                if(s['index'] == spPosition):
+                    s['varName'] = labelName
+                    break
+        #elif(labelContent['labelType'] == 'arrayVar'):
+        elif('[' in labelContent['contentType']):
             arrayName = labelName
             spPosition = labelContent['spPosition']
-            arrayLen = int(labelContent['contentLen'])/4
+            #arrayLen = int(labelContent['contentLen'])/4
+            arrayLen = int(labelContent['contentType'][labelContent['contentType'].find('[')+1:-1])
             indexCount = 0
             for s in spTable:
                 if(s['index'] == spPosition + indexCount*4):
                     s['varName'] = arrayName+'['+str(indexCount)+']'
                     indexCount += 1
+                    if(indexCount >= arrayLen):
+                        break
+        elif('struct' in labelContent['contentType']):
+            structName = labelContent['contentType'].split()[1]
+            structContent = structTable[structName]
+            spPos = labelContent['spPosition']
+            spTable = spTableBuilding_structHandle(spTable, labelName, structName, structContent, spPos)[0]
+            
     return spTable
-def handleSub(t):
+def handleFuncDefinition(t):
     global labelTable
     global varCount
     
@@ -573,7 +483,7 @@ def handleSub(t):
     for i in inputParameter.children:
         if(inputParameter.children[0].name == 'None'):
             break
-        labelTable_Declare(i, 0)
+        labelTable_Declare(i, findLN(progBody, 0))
     
     # handle program body
     addNewLabel2labelTable(Tree('0;', format=1), 'const', 'int', 4, 0, None, False)
@@ -616,18 +526,6 @@ def labelTable_myStructDefinition(t, codeLN):
             varName, declareType, contentLen, declareVarCount = handle_DeclareTypes(sb, codeLN)
             structVarCount += declareVarCount
             structBodyContent.append([declareType, varName.name])
-            '''
-            declareType = sb.search_nodes(name="declareType")[0].children[0].name
-            if('myStruct' in declareType):
-                declareType += ' '+ sb.search_nodes(name="declareType")[0].children[0].children[0].children[0].name
-            varName = sb.search_nodes(name = 'varName')[0].children[0].children[0].name
-            if(declareType == 'int'):
-                structVarCount += 1
-            elif('myStruct' in declareType):
-                structVarCount += structTable[declareType.split()[1]]['varCount']
-            structBodyContent.append([declareType, varName])
-            #structVarCount = structVarCount + 1
-            '''
             
         else:
             handle_error(findLN(t, i), sys._getframe().f_lineno, 'Unknow code type: %s'%(sb.name))
@@ -662,7 +560,7 @@ while('()' in ast):
 # start label estimating
 subProg = {}
 t = Tree(ast+';', format = 1)
-#t.show()
+t.show()
 # handle global
 handleGlobal(t)
 

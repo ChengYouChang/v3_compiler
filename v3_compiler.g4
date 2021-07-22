@@ -29,7 +29,7 @@ myDeclare returns[myDeclareAST='']
     id1=ID 
         {$myDeclareAST += ')type,(%s)var)myDeclare'%($id1.text)}
     (Assign myExpr
-        {$myDeclareAST += '((=)op,(%s)var,%s)myEpxer'%($id1.text, $myExpr.myExprAST)})?
+        {$myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%($id1.text, $myExpr.myExprAST)})?
     (Comma 
         {$myDeclareAST += '((%s'%($myType.myTypeAST)}
     (Star
@@ -37,7 +37,7 @@ myDeclare returns[myDeclareAST='']
     id2=ID 
         {$myDeclareAST += ')type,(%s)var)myDeclare'%($id2.text)}
     (Assign myExpr
-        {$myDeclareAST += '((=)op,(%s)var,%s)myEpxer'%($id2.text, $myExpr.myExprAST)})?)*
+        {$myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%($id2.text, $myExpr.myExprAST)})?)*
     
     // array declaration: int a[10]; int b[2][3];
     | myType ID LeftBracket IntegerConstant RightBracket
@@ -199,7 +199,7 @@ myIteration returns[myIterationAST='']
     myForCondi RightParen 
         {$myIterationAST += '%s'%($myForCondi.myForCondiAST)}
     myStatement
-        {$myIterationAST += '(%s)myForBody)myFor'%($myStatement.myStatementAST)}
+        {$myIterationAST += '(%s)forBody)myIteration'%($myStatement.myStatementAST)}
     | WHILE LeftParen myExpr? RightParen myStatement
     ;
 myForCondi returns[myForCondiAST='']

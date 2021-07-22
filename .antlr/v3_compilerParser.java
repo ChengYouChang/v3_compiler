@@ -352,7 +352,7 @@ public class v3_compilerParser extends Parser {
 					match(Assign);
 					setState(63);
 					((MyDeclareContext)_localctx).myExpr = myExpr(0);
-					_localctx.myDeclareAST += '((=)op,(%s)var,%s)myEpxer'%((((MyDeclareContext)_localctx).id1!=null?((MyDeclareContext)_localctx).id1.getText():null), ((MyDeclareContext)_localctx).myExpr.myExprAST)
+					_localctx.myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%((((MyDeclareContext)_localctx).id1!=null?((MyDeclareContext)_localctx).id1.getText():null), ((MyDeclareContext)_localctx).myExpr.myExprAST)
 					}
 				}
 
@@ -392,7 +392,7 @@ public class v3_compilerParser extends Parser {
 						match(Assign);
 						setState(80);
 						((MyDeclareContext)_localctx).myExpr = myExpr(0);
-						_localctx.myDeclareAST += '((=)op,(%s)var,%s)myEpxer'%((((MyDeclareContext)_localctx).id2!=null?((MyDeclareContext)_localctx).id2.getText():null), ((MyDeclareContext)_localctx).myExpr.myExprAST)
+						_localctx.myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%((((MyDeclareContext)_localctx).id2!=null?((MyDeclareContext)_localctx).id2.getText():null), ((MyDeclareContext)_localctx).myExpr.myExprAST)
 						}
 					}
 
@@ -1710,7 +1710,7 @@ public class v3_compilerParser extends Parser {
 				_localctx.myIterationAST += '%s'%(((MyIterationContext)_localctx).myForCondi.myForCondiAST)
 				setState(433);
 				((MyIterationContext)_localctx).myStatement = myStatement();
-				_localctx.myIterationAST += '(%s)myForBody)myFor'%(((MyIterationContext)_localctx).myStatement.myStatementAST)
+				_localctx.myIterationAST += '(%s)forBody)myIteration'%(((MyIterationContext)_localctx).myStatement.myStatementAST)
 				}
 				break;
 			case WHILE:

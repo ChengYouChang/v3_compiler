@@ -656,7 +656,7 @@ class v3_compilerParser ( Parser ):
                     self.match(v3_compilerParser.Assign)
                     self.state = 63
                     localctx._myExpr = self.myExpr(0)
-                    localctx.myDeclareAST += '((=)op,(%s)var,%s)myEpxer'%((None if localctx.id1 is None else localctx.id1.text), localctx._myExpr.myExprAST)
+                    localctx.myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%((None if localctx.id1 is None else localctx.id1.text), localctx._myExpr.myExprAST)
 
 
                 self.state = 87
@@ -688,7 +688,7 @@ class v3_compilerParser ( Parser ):
                         self.match(v3_compilerParser.Assign)
                         self.state = 80
                         localctx._myExpr = self.myExpr(0)
-                        localctx.myDeclareAST += '((=)op,(%s)var,%s)myEpxer'%((None if localctx.id2 is None else localctx.id2.text), localctx._myExpr.myExprAST)
+                        localctx.myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%((None if localctx.id2 is None else localctx.id2.text), localctx._myExpr.myExprAST)
 
 
                     self.state = 89
@@ -2068,7 +2068,7 @@ class v3_compilerParser ( Parser ):
                 localctx.myIterationAST += '%s'%(localctx._myForCondi.myForCondiAST)
                 self.state = 433
                 localctx._myStatement = self.myStatement()
-                localctx.myIterationAST += '(%s)myForBody)myFor'%(localctx._myStatement.myStatementAST)
+                localctx.myIterationAST += '(%s)forBody)myIteration'%(localctx._myStatement.myStatementAST)
                 pass
             elif token in [v3_compilerParser.WHILE]:
                 self.enterOuterAlt(localctx, 2)

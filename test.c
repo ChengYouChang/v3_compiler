@@ -1,12 +1,8 @@
-// test different type of variable
-struct student{
-    int h;
-};
+// Basic functions test code
 int main()
 {
-    int x;
-    int *y;
-    int z[2];
-    struct student s;
-    return 0;
+    int x,i;
+    for(i=0;i<3;i++){
+        x++;
+    }
 }

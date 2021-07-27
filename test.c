@@ -1,13 +1,7 @@
-// Selection test code
 int main()
 {
-    int x, y;
-    if(5+1>31){
-        x=0;
+    int i,x;
+    for(i=0;i<3;i++){
+        x=i;
     }
-    else{
-        x=1;
-    }
-
-
 }

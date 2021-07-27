@@ -572,7 +572,8 @@ while('()' in ast):
 subProg = {}
 t = Tree(ast+';', format = 1)
 # show AST
-t.show()
+a=1
+#t.show()
 # handle global
 handleGlobal(t)
 
@@ -1187,7 +1188,7 @@ def jmpRule(t ,label, codeLN):
     elif(len(t.children)==0):
         assCodeAppend('JEQ %s'%label)
     else:
-        condiOp = t.search_nodes(name='op')[0].children[0].name
+        condiOp = t.search_nodes(name='cmpOp')[0].children[0].name
         if(condiOp == '=='):
             assCodeAppend('JEQ %s'%label)
         elif(condiOp == '!='):
@@ -1202,7 +1203,40 @@ def jmpRule(t ,label, codeLN):
             assCodeAppend('JGE %s'%label)
         else:
             handle_error(codeLN, sys._getframe().f_lineno, 'Error type of code: %s '%(t.name))
+
+def handleCondition(t, subProgName, codeLN):
+    t = t.children[0]
+    # handle condition
+    if(len(t.search_nodes(name = 'cmpOp'))>0):
+        # handle compare op
+        opLeft = t.children[1]
+        opCode, reg1, reg2 = expr2ass(opLeft, subProgName, codeLN)
+        opLeftTmp = newTmp()
+        opLeftReg = makeLabelLive(opLeftTmp, subProgName)
+        assCodeAppend('%s %s %s %s'%(opCode, opLeftReg, reg1, reg2))
+        exprFreeTmp(opLeft, reg1, reg2, subProgName, codeLN)
         
+        opRight = t.children[2]
+        opCode, reg1, reg2 = expr2ass(opRight, subProgName, codeLN)
+        opRightTmp = newTmp()
+        opRightReg = makeLabelLive(opRightTmp, subProgName)
+        assCodeAppend('%s %s %s %s'%(opCode, opRightReg, reg1, reg2))
+        exprFreeTmp(opRight, reg1, reg2, subProgName, codeLN)
+        
+        assCodeAppend('CMP %s %s'%(opLeftReg, opRightReg))
+        freeTmpReg(opLeftTmp)
+        freeTmpReg(opRightTmp)
+    else:
+        # handle normal expr op
+        opCode, reg1, reg2 = expr2ass(t, subProgName, codeLN)
+        condiTmp = newTmp()
+        condiReg = makeLabelLive(condiTmp, subProgName)
+        assCodeAppend('%s %s %s %s'%(opCode, condiReg, reg1, reg2))
+        exprFreeTmp(t, reg1, reg2, subProgName, codeLN)
+        assCodeAppend('CMP %s R0'%(condiReg))
+        freeTmpReg(condiTmp)
+    # handle if confition done
+    
 def selection2ass(t, subProgName, codeLN):
     ifCondi = t.search_nodes(name = 'ifCondi')[0].children[0]
     ifCodeBody = t.search_nodes(name = 'ifBody')[0]
@@ -1211,45 +1245,39 @@ def selection2ass(t, subProgName, codeLN):
     else:
         elseCodeBody = t.search_nodes(name = 'elseBody')[0]
     
-    # handle if condition
-    opCode, reg1, reg2 = expr2ass(ifCondi, subProgName, codeLN)
-    ifCondiTmp = newTmp()
-    ifCondiReg = makeLabelLive(ifCondiTmp, subProgName)
-    assCodeAppend('%s %s %s %s'%(opCode, ifCondiReg, reg1, reg2))
-    exprFreeTmp(ifCondi, reg1, reg2, subProgName, codeLN)
-    assCodeAppend('CMP %s R0'%(ifCondiReg))
-    freeTmpReg(ifCondiTmp)
+    handleCondition(ifCondi, subProgName, codeLN)
     '''
-    if(len(ifCondi.children) == 1):
-        # if(x) , if(1)
+    # handle if condition
+    if(len(ifCondi.search_nodes(name = 'cmpOp'))>0):
+        # handle compare op
+        opLeft = ifCondi.children[1]
+        opCode, reg1, reg2 = expr2ass(opLeft, subProgName, codeLN)
+        opLeftTmp = newTmp()
+        opLeftReg = makeLabelLive(opLeftTmp, subProgName)
+        assCodeAppend('%s %s %s %s'%(opCode, opLeftReg, reg1, reg2))
+        exprFreeTmp(opLeft, reg1, reg2, subProgName, codeLN)
+        
+        opRight = ifCondi.children[2]
+        opCode, reg1, reg2 = expr2ass(opRight, subProgName, codeLN)
+        opRightTmp = newTmp()
+        opRightReg = makeLabelLive(opRightTmp, subProgName)
+        assCodeAppend('%s %s %s %s'%(opCode, opRightReg, reg1, reg2))
+        exprFreeTmp(opRight, reg1, reg2, subProgName, codeLN)
+        
+        assCodeAppend('CMP %s %s'%(opLeftReg, opRightReg))
+        freeTmpReg(opLeftTmp)
+        freeTmpReg(opRightTmp)
+    else:
+        # handle normal expr op
+        opCode, reg1, reg2 = expr2ass(ifCondi, subProgName, codeLN)
         ifCondiTmp = newTmp()
         ifCondiReg = makeLabelLive(ifCondiTmp, subProgName)
-        opCode, reg1, reg2 = expr2ass(ifCondi, subProgName, codeLN)
         assCodeAppend('%s %s %s %s'%(opCode, ifCondiReg, reg1, reg2))
+        exprFreeTmp(ifCondi, reg1, reg2, subProgName, codeLN)
         assCodeAppend('CMP %s R0'%(ifCondiReg))
-        freeTmpReg(ifCondiTmp)
-    else:
-        # if(x==0) , if(x+4)
-        ifOp = ifCondi.search_nodes(name='op')[0].children[0].name
-        if(ifOp in compOps):
-            # CMP directily
-            opCode, reg1, reg2 = expr2ass(ifCondi, subProgName, codeLN)
-            assCodeAppend('%s %s %s'%(opCode, reg1, reg2))
-            freeTmpReg(reg[reg1])
-            freeTmpReg(reg[reg2])
-        else:
-            # put the result into a tmp register
-            cmpTmp = newTmp()
-            cmpReg = makeLabelLive(cmpTmp, subProgName)
-            opCode, reg1, reg2 = expr2ass(ifCondi, subProgName, codeLN)
-            assCodeAppend('%s %s %s %s'%(opCode, cmpReg, reg1, reg2))
-            assCodeAppend('CMP %s R0'%(cmpReg))
-            freeTmpReg(cmpTmp)
-            freeTmpReg(reg[reg1])
-            freeTmpReg(reg[reg2])
+        freeTmpReg(ifCondiTmp)    
+    # handle if confition done
     '''
-    # handle if confition finish
-    
     # assign labels
     elseCodeLabel = newAssLabel()
     if(elseCodeBody == None):
@@ -1294,7 +1322,7 @@ def selection2ass(t, subProgName, codeLN):
     # IF code body done, out of the IF
     assCodeAppend(outLabel+':')
     
-def forloop2ass(t, subProgName, codeLN):
+def iteration2ass(t, subProgName, codeLN):
     forInit = t.search_nodes(name = 'forInit')[0]
     forCondi = t.search_nodes(name = 'forCondi')[0]
     forIncrement = t.search_nodes(name = 'forIncrement')[0]
@@ -1318,7 +1346,7 @@ def forloop2ass(t, subProgName, codeLN):
         if(forInit.children[i].name == 'myDeclare'):
             declare2ass(forInit.children[i], subProgName, findLN(t, 0))
         elif(forInit.children[i].name == 'myExpr'):
-            expr2ass(forInit.children[i], subProgName, findLN(t, 0))
+            expr2ass(forInit.children[i], subProgName, findLN(forBody, 0))
         elif(forInit.children[i].name == 'None'):
             pass
         else:
@@ -1334,12 +1362,16 @@ def forloop2ass(t, subProgName, codeLN):
     # handle FOR Increment
     for i in range(len(forIncrement.children)):
         if(forIncrement.children[i].name == 'myExpr'):
-            expr2ass(forIncrement.children[i], subProgName, findLN(t, 0))
+            expr2ass(forIncrement.children[i], subProgName, findLN(forBody, 0))
         elif(forIncrement.children[i].name == 'None'):
             pass
         else:
             handle_error(findLN(t, 0), sys._getframe().f_lineno, 'Unknow code type in for increment: %s'%(forIncrement.name))
     
+    assCodeAppend('%s:'%(L_condi))
+    handleCondition(forCondi, subProgName, codeLN)
+    jmpRule(forCondi, L_body, codeLN)
+    '''
     # handle FOR condi
     assCodeAppend('%s:'%(L_condi))
     for i in range(len(forCondi.children)):
@@ -1372,8 +1404,9 @@ def forloop2ass(t, subProgName, codeLN):
                 opCode, reg1, reg2 = expr2ass(forCondi.children[i], subProgName, codeLN)
                 assCodeAppend('%s %s %s %s'%(opCode, cmpReg, reg1, reg2))
                 assCodeAppend('CMP %s R0'%(cmpReg))
-                freeTmpReg(cmpTmp)            
-        jmpRule(forCondi.children[i], L_body, codeLN)
+                freeTmpReg(cmpTmp)  
+    '''
+        
     
     # L_out
     assCodeAppend('%s:'%(L_out))
@@ -1413,9 +1446,9 @@ def progBodyFilter(t, subProgName):
         elif(t.children[i].name == 'myReturn'):
             return2ass(t.children[i], subProgName, findLN(t, i))
         elif(t.children[i].name == 'mySelection'):
-            selection2ass(t.children[i], subProgName, findLN(t.children[i], 0))
+            selection2ass(t.children[i], subProgName, findLN(t, i))
         elif(t.children[i].name == 'myIteration'):
-            forloop2ass(t.children[i], subProgName, findLN(t, i))
+            iteration2ass(t.children[i], subProgName, findLN(t, i))
         elif(t.children[i].name == 'myFuncCall'):
             myFuncCall2ass(t.children[i], subProgName, findLN(t, i))
         else:

@@ -1062,8 +1062,6 @@ def expr2ass(t, subProgName, codeLN):
         # arrayOffsetReg <= index<<2
         assCodeAppend("SHL %s %s 2"%(arrayIndexReg, arrayIndexReg))
         
-        
-        
         # if arrayVar is global var
         if(arrayName in globalVarTable):
             return 'LD', arrayIndexReg, arrayName
@@ -1246,38 +1244,7 @@ def selection2ass(t, subProgName, codeLN):
         elseCodeBody = t.search_nodes(name = 'elseBody')[0]
     
     handleCondition(ifCondi, subProgName, codeLN)
-    '''
-    # handle if condition
-    if(len(ifCondi.search_nodes(name = 'cmpOp'))>0):
-        # handle compare op
-        opLeft = ifCondi.children[1]
-        opCode, reg1, reg2 = expr2ass(opLeft, subProgName, codeLN)
-        opLeftTmp = newTmp()
-        opLeftReg = makeLabelLive(opLeftTmp, subProgName)
-        assCodeAppend('%s %s %s %s'%(opCode, opLeftReg, reg1, reg2))
-        exprFreeTmp(opLeft, reg1, reg2, subProgName, codeLN)
-        
-        opRight = ifCondi.children[2]
-        opCode, reg1, reg2 = expr2ass(opRight, subProgName, codeLN)
-        opRightTmp = newTmp()
-        opRightReg = makeLabelLive(opRightTmp, subProgName)
-        assCodeAppend('%s %s %s %s'%(opCode, opRightReg, reg1, reg2))
-        exprFreeTmp(opRight, reg1, reg2, subProgName, codeLN)
-        
-        assCodeAppend('CMP %s %s'%(opLeftReg, opRightReg))
-        freeTmpReg(opLeftTmp)
-        freeTmpReg(opRightTmp)
-    else:
-        # handle normal expr op
-        opCode, reg1, reg2 = expr2ass(ifCondi, subProgName, codeLN)
-        ifCondiTmp = newTmp()
-        ifCondiReg = makeLabelLive(ifCondiTmp, subProgName)
-        assCodeAppend('%s %s %s %s'%(opCode, ifCondiReg, reg1, reg2))
-        exprFreeTmp(ifCondi, reg1, reg2, subProgName, codeLN)
-        assCodeAppend('CMP %s R0'%(ifCondiReg))
-        freeTmpReg(ifCondiTmp)    
-    # handle if confition done
-    '''
+    
     # assign labels
     elseCodeLabel = newAssLabel()
     if(elseCodeBody == None):
@@ -1371,42 +1338,6 @@ def iteration2ass(t, subProgName, codeLN):
     assCodeAppend('%s:'%(L_condi))
     handleCondition(forCondi, subProgName, codeLN)
     jmpRule(forCondi, L_body, codeLN)
-    '''
-    # handle FOR condi
-    assCodeAppend('%s:'%(L_condi))
-    for i in range(len(forCondi.children)):
-        if(forCondi.children[i].name == "None"):
-            pass
-        elif(len(forCondi.children[i].children) == 1):
-            # if(x) , if(1)
-            r = None
-            if(labelTable[forCondi.children[i].children[0].name]['liveable']):
-                r = findReg(forCondi.children[i].name, subProgName)
-            elif(forCondi.children[i].children[0].name in labelTable):
-                r = makeLabelLive(forCondi.children[i].children[0].name, subProgName)
-                assCodeAppend('LDI %s R0 %s'%(r, forCondi.children[i].children[0].name))
-            else:
-                handle_error(codeLN, sys._getframe().f_lineno, 'Error! %s not found(return type)'%(forCondi.children[i].name))
-                
-            assCodeAppend('CMP %s R0'%(r))
-        else:
-            # if(x==0) , if(x+4)
-            ifOp = forCondi.children[i].search_nodes(name='op')[0].children[0].name
-            if(ifOp in compOps):
-                # CMP directily
-                opCode, reg1, reg2 = expr2ass(forCondi.children[i], subProgName, codeLN)
-                assCodeAppend('%s %s %s'%(opCode, reg1, reg2))
-                exprFreeTmp(forCondi.children[i], reg1, reg2, subProgName, codeLN)
-            else:
-                # put the result into a tmp register
-                cmpTmp = newTmp()
-                cmpReg = makeLabelLive(cmpTmp, subProgName)
-                opCode, reg1, reg2 = expr2ass(forCondi.children[i], subProgName, codeLN)
-                assCodeAppend('%s %s %s %s'%(opCode, cmpReg, reg1, reg2))
-                assCodeAppend('CMP %s R0'%(cmpReg))
-                freeTmpReg(cmpTmp)  
-    '''
-        
     
     # L_out
     assCodeAppend('%s:'%(L_out))

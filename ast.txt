@@ -1,1 +1,1 @@
-(((int)returnType,(main)funcName,()myFuncInputPara,((1)myNL(2)myNL((int)type,(i)var)myDeclare((int)type,(x)var)myDeclare(3)myNL((((=)op,(i)var,(0)intConst)myExpr)forInit(((<)cmpOp,(i)var,(3)intConst)myExpr)forCondi(((=)op,(i)var,((+)op,(i)var,(1)intConst)myExpr)myExpr)forIncrement((4)myNL((=)op,(x)var,(i)var)myExpr(5)myNL)forBody)myIteration(6)myNL)myFuncBody)myFuncDefinition)myGlobal
+()myGlobal

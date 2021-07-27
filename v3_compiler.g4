@@ -29,7 +29,7 @@ myDeclare returns[myDeclareAST='']
     id1=ID 
         {$myDeclareAST += ')type,(%s)var)myDeclare'%($id1.text)}
     (Assign myExpr
-        {$myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%($id1.text, $myExpr.myExprAST)})?
+        {$myDeclareAST += '((=)op,(%s)var,%s)myExpr'%($id1.text, $myExpr.myExprAST)})?
     (Comma 
         {$myDeclareAST += '((%s'%($myType.myTypeAST)}
     (Star
@@ -37,7 +37,7 @@ myDeclare returns[myDeclareAST='']
     id2=ID 
         {$myDeclareAST += ')type,(%s)var)myDeclare'%($id2.text)}
     (Assign myExpr
-        {$myDeclareAST += '((=)op,(%s)ID,%s)myExpr'%($id2.text, $myExpr.myExprAST)})?)*
+        {$myDeclareAST += '((=)op,(%s)var,%s)myExpr'%($id2.text, $myExpr.myExprAST)})?)*
     
     // array declaration: int a[10]; int b[2][3];
     | myType ID LeftBracket IntegerConstant RightBracket
@@ -85,9 +85,7 @@ myStatement returns[myStatementAST='']
         {$myStatementAST += '%s'%($myNL.myNLAST)}
     )* (myFuncBodyCode
         {$myStatementAST += '%s'%($myFuncBodyCode.myFuncBodyCodeAST)})* 
-        RightBrace(myNL
-        {$myStatementAST += '%s'%($myNL.myNLAST)}
-    )*
+        RightBrace
     | myFuncBodyCode
         {$myStatementAST += '%s'%($myFuncBodyCode.myFuncBodyCodeAST)}
     ;
@@ -130,7 +128,7 @@ myExpr returns[myExprAST='']
     | Plus myExpr                       // +3
         {$myExprAST += '%s'%($myExpr.myExprAST)}
     | Minus myExpr                      // -3
-        {$myExprAST += '((*)op,%s,-1)myExpr'%($myExpr.myExprAST)}
+        {$myExprAST += '((*)op,%s,(-1)intConst)myExpr'%($myExpr.myExprAST)}
     | Not myExpr                        // !a
     | Tilde myExpr                      // ~a
     | LeftParen myType (Star)* RightParen myExpr// (int)x
@@ -150,10 +148,10 @@ myExpr returns[myExprAST='']
         {$myExprAST += '((%s)op,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
     // priority level 6
     | e1=myExpr op=(Less|LessEqual|Greater|GreaterEqual) e2=myExpr   // a>b, a>=b, a<b, a<=b
-        {$myExprAST += '((%s)op,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
+        {$myExprAST += '((%s)cmpOp,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
     // priority level 7
     | e1=myExpr op=(Equal|NotEqual) e2=myExpr    // a==b, a!=b
-        {$myExprAST += '((%s)op,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
+        {$myExprAST += '((%s)cmpOp,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
     // priority level 8
     | e1=myExpr op=And e2=myExpr                 // a&b
         {$myExprAST += '((%s)op,%s,%s)myExpr'%($op.text, $e1.myExprAST, $e2.myExprAST)}
@@ -174,9 +172,9 @@ myExpr returns[myExprAST='']
                                                 // a=b, a+=b, a*=b ...
         {$myExprAST += '((%s)op,%s,%s)myExpr'%($op.text,$e1.myExprAST,$e2.myExprAST)}
     | LeftParen myExpr RightParen               // (a+b)*c
-        {$myExprAST += '%s'%(myExpr.myExprAST)}
+        {$myExprAST += '%s'%($myExpr.myExprAST)}
     | ID
-        {$myExprAST += '(%s)ID'%($ID.text)}
+        {$myExprAST += '(%s)var'%($ID.text)}
     | IntegerConstant
         {$myExprAST += '(%s)intConst'%($IntegerConstant.text)}
     ;
@@ -189,6 +187,7 @@ mySelection returns[mySelectionAST='']
         {$mySelectionAST +=')ifCondi'}
     myStatement
         {$mySelectionAST += '(%s)ifBody'%($myStatement.myStatementAST)}
+    (myNL{$mySelectionAST += '%s'%($myNL.myNLAST)})*
      (ELSE myStatement
         {$mySelectionAST += '(%s)elseBody'%($myStatement.myStatementAST)})?
         {$mySelectionAST +=')mySelection'}

@@ -1,1 +1,1 @@
-()myGlobal
+(((int)returnType,(main)funcName,()myFuncInputPara,((1)myNL(2)myNL((int)type,(x)var)myDeclare(3)myNL((=)op,(x)var,((+)op,((+)op,(1)intConst,(2)intConst)myExpr,(3)intConst)myExpr)myExpr(4)myNL)myFuncBody)myFuncDefinition)myGlobal

@@ -13,6 +13,8 @@ globalSpace returns[finalAST = '']
 myGlobalCode returns[myGlobalAST = '']
     : d=myDeclare Semi
         {$myGlobalAST += '(%s)myDeclare'%($d.myDeclareAST)}
+    | myFuncDeclare
+        {$myGlobalAST += '(%s)myFuncDeclare'%($myFuncDeclare.myFuncDeclareAST)}
     | myFuncDefinition
         {$myGlobalAST += '(%s)myFuncDefinition'%($myFuncDefinition.myFuncDefinitionAST)}
     | myNL
@@ -47,12 +49,16 @@ myDeclare returns[myDeclareAST='']
         {$myDeclareAST += ')myDeclare'}
     // function pointer declaration
     | myType LeftParen? Star? ID RightParen? LeftParen (myFuncInputPara(Comma myFuncInputPara)*)? RightParen
+        {$myDeclareAST += '(((%s)function_pointer)type,(%s)var)myDeclare'%($myType.myTypeAST, $ID.text)}
     
     // struct definition
     | STRUCT ID 
         {$myDeclareAST += '((%s)myStructName' %($ID.text)}
     myStatement
         {$myDeclareAST += '(%s)myStructBody)myStructDefinition' %($myStatement.myStatementAST)}
+    ;
+myFuncDeclare returns[myFuncDeclareAST='']
+    : myType ID LeftParen RightParen Semi
     ;
 myFuncDefinition returns[myFuncDefinitionAST='']
     : myType ID LeftParen 
